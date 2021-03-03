@@ -7,7 +7,7 @@ from botocore.exceptions import ClientError
 import constants
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.ERROR)
 
 sqs_resource = boto3.resource('sqs')
 sqs_client = boto3.client('sqs')
@@ -26,6 +26,14 @@ def get_queue(name):
         raise error
     else:
         return queue
+
+
+def get_queue_size(queue):
+    try:
+        size = queue.attributes.get('ApproximateNumberOfMessages')
+    except ClientError as error:
+        logger.exception("Couldn't find the size of the queue: %s", queue)
+    return size
 
 
 def update_q_attributes(queue_url, attributes):
@@ -78,11 +86,16 @@ def send_message(queue, message_body, message_attributes=None):
 
 
 if __name__ == '__main__':
-    q = get_queue(constants.INPUT_QUEUE)
+    q = get_queue(constants.REQUEST_QUEUE)
+    q_url = sqs_client.get_queue_url(QueueName=constants.REQUEST_QUEUE, QueueOwnerAWSAccountId="551493253543")
 
-    for i in range(5):
+    for i in range(100):
         send_message(q, "What on earth is this?")
 
+    size = get_queue_size(q)
+    print("Queue size:", get_queue_size(q))
+    
     while True:
         receive_messages(q, 10, 3)
+        print("Queue size:", get_queue_size(q))
         time.sleep(1)
