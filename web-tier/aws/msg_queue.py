@@ -89,7 +89,7 @@ if __name__ == '__main__':
     q = get_queue(constants.REQUEST_QUEUE)
     q_url = sqs_client.get_queue_url(QueueName=constants.REQUEST_QUEUE, QueueOwnerAWSAccountId="551493253543")
 
-    for i in range(100):
+    for i in range(10):
         send_message(q, "What on earth is this?")
 
     size = get_queue_size(q)

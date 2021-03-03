@@ -46,9 +46,9 @@ def terminate_instance(instance_id):
 
 
 if __name__ == '__main__':
-    instance = create_instance(constants.AMI_ID, "t2.micro")
-    # response = ec2_client.describe_key_pairs()
-    # print(instance)
+    # instance = create_instance(constants.AMI_ID, "t2.micro")
+    response = ec2_client.describe_key_pairs()
+    print(response)
 
-    instance_id = "i-09c5eae4563fde21c"
-    terminate_instance(instance_id)
+    # instance_id = "i-09c5eae4563fde21c"
+    # terminate_instance(instance_id)
