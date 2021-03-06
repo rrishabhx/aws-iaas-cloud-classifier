@@ -32,12 +32,10 @@ def get_queue_size(queue_name):
     try:
         queue = get_queue(queue_name)
         size = queue.attributes.get('ApproximateNumberOfMessages')
-        print("Approximate number of messages:", size)
-        print("===========================================")
-
     except ClientError as error:
-        logger.exception("Couldn't find the size of the queue: %s", queue)
-    return size
+        logger.exception("Couldn't find the size of the queue: %s", queue_name)
+    else:
+        return size
 
 
 def update_q_attributes(queue_url, attributes):
@@ -93,15 +91,15 @@ if __name__ == '__main__':
     q = get_queue(constants.REQUEST_QUEUE)
     q_url = sqs_client.get_queue_url(QueueName=constants.REQUEST_QUEUE, QueueOwnerAWSAccountId="551493253543")
 
-    for i in range(1000):
-        send_message(q, "What on earth is this?")
-        time.sleep(1)
+    # for i in range(1000):
+    #     send_message(q, "What on earth is this?")
+    #     time.sleep(1)
 
     # size = get_queue_size(q)
     # # print("Queue size:", get_queue_size(q))
-    
-    # while True:
-    #     receive_messages(q, 10, 3)
-    #     get_queue_size(q)
-    #     # print("Queue size:", get_queue_size(q))
-    #     time.sleep(3)
+
+    while True:
+        receive_messages(q, 10, 3)
+        # get_queue_size(q)
+        # print("Queue size:", get_queue_size(q))
+        # time.sleep(3)

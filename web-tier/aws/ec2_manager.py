@@ -11,23 +11,26 @@ ec2_resource = boto3.resource('ec2')
 ec2_client = boto3.client('ec2')
 
 
-def create_instance(
-        image_id, instance_type, key_name, security_group_names=None):
+def create_instances(
+        image_id, instance_type, key_name, security_group_names=None, max_count=1):
     try:
         instance_params = {
             'ImageId': image_id, 'InstanceType': instance_type, 'KeyName': key_name
         }
         if security_group_names is not None:
             instance_params['SecurityGroups'] = security_group_names
-        instance = ec2_resource.create_instances(**instance_params, MinCount=1, MaxCount=1)[0]
-        logger.info("Created instance %s.", instance.id)
+        # instance = ec2_resource.create_instances(**instance_params, MinCount=1, MaxCount=max_count)[0]
+        instances = ec2_resource.create_instances(**instance_params, MinCount=1, MaxCount=max_count)
+
+        for inst in instances:
+            inst.create_tags(Tags=[{'Key': 'Name',
+                                    'Value': 'App-Server'}])
+            # logger.info("Created EC2 instance: %s", inst.id)
     except ClientError:
         logging.exception(
             "Couldn't create instance with image %s, instance type %s, and key %s.",
             image_id, instance_type, key_name)
         raise
-    else:
-        return instance
 
 
 def terminate_instance(instance_id):
@@ -96,6 +99,20 @@ def total_running_instances():
         return len(list_instances)
 
 
+def get_running_instances_by_name(name):
+    try:
+        instances = ec2_resource.instances.filter(
+            Filters=[{'Name': 'instance-state-name', 'Values': ['running']},
+                     {'Name': 'tag:Name', 'Values': ['App-Server']}])
+
+        list_instances = [instance for instance in instances]
+    except ClientError:
+        logger.exception("Couldn't find total running instances")
+        raise
+    else:
+        return list_instances
+
+
 def print_all_running_instances():
     instances = ec2_resource.instances.filter(
         Filters=[{'Name': 'instance-state-name', 'Values': ['running']}])
@@ -106,13 +123,17 @@ def print_all_running_instances():
 if __name__ == '__main__':
     print(total_running_instances())
 
-    # instance = create_instance(constants.AMI_ID, "t2.micro", constants.EC2_KEY_PAIR,
-    #                            constants.SECURITY_GROUP_NAME)
-    # instance.create_tags(Tags=[{'Key':'Name',
-    #                             'Value': 'FarziInstance'}])
-    # print(instance)
-    # response = ec2_client.describe_key_pairs()
-    # print(response)
+    instance = create_instances(constants.AMI_ID, "t2.micro", constants.EC2_KEY_PAIR,
+                                constants.SECURITY_GROUP_NAME, 3)
 
-    # instance_id = "i-09c5eae4563fde21c"
-    # terminate_instance(instance_id)
+    # for app in get_running_instances_by_name('App-Server'):
+    #     terminate_instance(app.id)
+
+# instance.create_tags(Tags=[{'Key':'Name',
+#                             'Value': 'FarziInstance'}])
+# print(instance)
+# response = ec2_client.describe_key_pairs()
+# print(response)
+
+# instance_id = "i-09c5eae4563fde21c"
+# terminate_instance(instance_id)

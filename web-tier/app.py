@@ -1,4 +1,5 @@
 import os
+import time
 from flask import Flask, render_template, request, redirect, url_for, abort
 from werkzeug.utils import secure_filename
 
@@ -20,6 +21,7 @@ def index():
                     abort(400)
                 image.save(os.path.join(app.config['UPLOAD_PATH'], image_name))
 
+        time.sleep(10)
         return redirect(url_for('index'))
 
     return render_template('index.html')
