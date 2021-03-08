@@ -2,10 +2,10 @@ import logging
 import boto3
 from botocore.exceptions import ClientError
 
-import constants
+import config
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARN)
 
 ec2_resource = boto3.resource('ec2')
 ec2_client = boto3.client('ec2')
@@ -19,32 +19,17 @@ def create_instances(
         }
         if security_group_names is not None:
             instance_params['SecurityGroups'] = security_group_names
-        # instance = ec2_resource.create_instances(**instance_params, MinCount=1, MaxCount=max_count)[0]
+
         instances = ec2_resource.create_instances(**instance_params, MinCount=1, MaxCount=max_count)
 
         for inst in instances:
             inst.create_tags(Tags=[{'Key': 'Name',
-                                    'Value': 'App-Server'}])
-            # logger.info("Created EC2 instance: %s", inst.id)
+                                    'Value': f'App-Server'}])
+            # logger.warning("Created EC2 instance: %s", inst.id)
     except ClientError:
         logging.exception(
             "Couldn't create instance with image %s, instance type %s, and key %s.",
             image_id, instance_type, key_name)
-        raise
-
-
-def terminate_instance(instance_id):
-    """
-    Terminates an instance. The request returns immediately. To wait for the
-    instance to terminate, use Instance.wait_until_terminated().
-
-    :param instance_id: The ID of the instance to terminate.
-    """
-    try:
-        ec2_resource.Instance(instance_id).terminate()
-        logger.info("Terminating instance %s.", instance_id)
-    except ClientError:
-        logging.exception("Couldn't terminate instance %s.", instance_id)
         raise
 
 
@@ -59,12 +44,27 @@ def start_instance(instance_id):
     """
     try:
         response = ec2_resource.Instance(instance_id).start()
-        logger.info("Started instance %s.", instance_id)
+        logger.warning("Started instance %s.", instance_id)
     except ClientError:
         logger.exception("Couldn't start instance %s.", instance_id)
         raise
     else:
         return response
+
+
+def terminate_instance(instance_id):
+    """
+    Terminates an instance. The request returns immediately. To wait for the
+    instance to terminate, use Instance.wait_until_terminated().
+
+    :param instance_id: The ID of the instance to terminate.
+    """
+    try:
+        ec2_resource.Instance(instance_id).terminate()
+        logger.warning("Terminating instance %s.", instance_id)
+    except ClientError:
+        logging.exception("Couldn't terminate instance %s.", instance_id)
+        raise
 
 
 def stop_instance(instance_id):
@@ -78,7 +78,7 @@ def stop_instance(instance_id):
     """
     try:
         response = ec2_resource.Instance(instance_id).stop()
-        logger.info("Stopped instance %s.", instance_id)
+        logger.warning("Stopped instance %s.", instance_id)
     except ClientError:
         logger.exception("Couldn't stop instance %s.", instance_id)
         raise
@@ -89,7 +89,7 @@ def stop_instance(instance_id):
 def total_running_instances():
     try:
         instances = ec2_resource.instances.filter(
-            Filters=[{'Name': 'instance-state-name', 'Values': ['running']}])
+            Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
 
         list_instances = [instance for instance in instances]
     except ClientError:
@@ -102,8 +102,8 @@ def total_running_instances():
 def get_running_instances_by_name(name):
     try:
         instances = ec2_resource.instances.filter(
-            Filters=[{'Name': 'instance-state-name', 'Values': ['running']},
-                     {'Name': 'tag:Name', 'Values': ['App-Server']}])
+            Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']},
+                     {'Name': 'tag:Name', 'Values': [name]}])
 
         list_instances = [instance for instance in instances]
     except ClientError:
@@ -123,11 +123,11 @@ def print_all_running_instances():
 if __name__ == '__main__':
     print(total_running_instances())
 
-    instance = create_instances(constants.AMI_ID, "t2.micro", constants.EC2_KEY_PAIR,
-                                constants.SECURITY_GROUP_NAME, 3)
+    # instance = create_instances(config.AMI_ID, "t2.micro", config.EC2_KEY_PAIR,
+    #                             config.SECURITY_GROUP_NAME, 3)
 
-    # for app in get_running_instances_by_name('App-Server'):
-    #     terminate_instance(app.id)
+    for app in get_running_instances_by_name('App-Server'):
+        terminate_instance(app.id)
 
 # instance.create_tags(Tags=[{'Key':'Name',
 #                             'Value': 'FarziInstance'}])

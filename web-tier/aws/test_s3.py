@@ -1,13 +1,11 @@
-import json
 import logging
-import os
-import random
-import boto3
 import uuid
+
+import boto3
 
 from botocore.exceptions import ClientError
 
-from . import constants
+import config
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +37,7 @@ def put_object(bucket, object_key, data):
         obj = bucket.Object(object_key)
         obj.put(Body=put_data)
         obj.wait_until_exists()
-        logger.info("Put object '%s' to bucket '%s'.", object_key, bucket.name)
+        logger.warning("Put object '%s' to bucket '%s'.", object_key, bucket.name)
     except ClientError:
         logger.exception("Couldn't put object '%s' to bucket '%s'.",
                          object_key, bucket.name)
@@ -73,7 +71,6 @@ def upload_file(file_name, bucket, object_name=None):
 
 def upload_file_to_s3(file, bucket_name, acl="public-read"):
     try:
-
         s3_client.upload_fileobj(
             file,
             bucket_name,
@@ -83,9 +80,9 @@ def upload_file_to_s3(file, bucket_name, acl="public-read"):
                 "ContentType": file.content_type
             }
         )
-
+        logger.warning("Upload to S3 complete")
     except ClientError as e:
-        print("Couldn't upload image to S3: ", e)
+        logger.error("Couldn't upload image to S3: ", e)
 
 
 def get_object(bucket, object_key):
@@ -100,7 +97,7 @@ def get_object(bucket, object_key):
     """
     try:
         body = bucket.Object(object_key).get()['Body'].read()
-        logger.info("Got object '%s' from bucket '%s'.", object_key, bucket.name)
+        logger.warning("Got object '%s' from bucket '%s'.", object_key, bucket.name)
     except ClientError:
         logger.exception(("Couldn't get object '%s' from bucket '%s'.",
                           object_key, bucket.name))
@@ -124,7 +121,7 @@ def list_objects(bucket, prefix=None):
             objects = list(bucket.objects.all())
         else:
             objects = list(bucket.objects.filter(Prefix=prefix))
-        logger.info("Got objects %s from bucket '%s'",
+        logger.warning("Got objects %s from bucket '%s'",
                     [o.key for o in objects], bucket.name)
     except ClientError:
         logger.exception("Couldn't get objects for bucket '%s'.", bucket.name)
@@ -133,8 +130,16 @@ def list_objects(bucket, prefix=None):
         return objects
 
 
+def get_uniq_filename(file_name):
+    uniq_file_name = ''.join([str(uuid.uuid4().hex[:6]), file_name])
+
+    return uniq_file_name
+
+
 if __name__ == '__main__':
-    print(constants.INPUT_BUCKET)
+    print(get_uniq_filename("1_ship.png"))
+    print(get_uniq_filename("1_hellot.png"))
+    # print(config.INPUT_BUCKET)
     # upload_file('uploads/0_cat.png', constants.INPUT_BUCKET)
 # s3_buck = s3.Bucket('cse546-input-bucket')
 # put_object(s3_buck, 'requirements.txt', 'requirements.txt')

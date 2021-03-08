@@ -1,13 +1,12 @@
 import logging
-import time
 
 import boto3
 from botocore.exceptions import ClientError
 
-import constants
+import config
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.WARN)
 
 sqs_resource = boto3.resource('sqs')
 sqs_client = boto3.client('sqs')
@@ -33,7 +32,7 @@ def get_queue_size(queue_name):
         queue = get_queue(queue_name)
         size = queue.attributes.get('ApproximateNumberOfMessages')
     except ClientError as error:
-        logger.exception("Couldn't find the size of the queue: %s", queue_name)
+        logger.exception("Couldn't find the size of the queue: %s", error)
     else:
         return size
 
@@ -45,8 +44,9 @@ def update_q_attributes(queue_url, attributes):
     )
 
 
-def receive_messages(queue, max_number, wait_time):
+def receive_messages(queue_name, max_number, wait_time, to_delete=True):
     try:
+        queue = get_queue(queue_name)
         messages = queue.receive_messages(
             MessageAttributeNames=['All'],
             MaxNumberOfMessages=max_number,
@@ -54,9 +54,10 @@ def receive_messages(queue, max_number, wait_time):
         )
         for msg in messages:
             logger.info("Received message: %s: %s", msg.message_id, msg.body)
-            delete_message(msg)
+            if to_delete:
+                delete_message(msg)
     except ClientError as error:
-        logger.exception("Couldn't receive messages from queue: %s", queue)
+        logger.exception("Couldn't receive messages from queue: %s", queue_name)
         raise error
     else:
         return messages
@@ -71,10 +72,12 @@ def delete_message(message):
         raise error
 
 
-def send_message(queue, message_body, message_attributes=None):
+def send_message(queue_name, message_body, message_attributes=None):
+    queue = get_queue(queue_name)
+
     if not message_attributes:
         message_attributes = {}
-
+    logger.warning("Send message: %s to the queue", message_body)
     try:
         response = queue.send_message(
             MessageBody=message_body,
@@ -88,8 +91,7 @@ def send_message(queue, message_body, message_attributes=None):
 
 
 if __name__ == '__main__':
-    q = get_queue(constants.REQUEST_QUEUE)
-    q_url = sqs_client.get_queue_url(QueueName=constants.REQUEST_QUEUE, QueueOwnerAWSAccountId="551493253543")
+    # q_url = sqs_client.get_queue_url(QueueName=config.REQUEST_QUEUE, QueueOwnerAWSAccountId="551493253543")
 
     # for i in range(1000):
     #     send_message(q, "What on earth is this?")
@@ -99,7 +101,7 @@ if __name__ == '__main__':
     # # print("Queue size:", get_queue_size(q))
 
     while True:
-        receive_messages(q, 10, 3)
+        print(receive_messages(config.REQUEST_QUEUE, 10, 3))
         # get_queue_size(q)
         # print("Queue size:", get_queue_size(q))
         # time.sleep(3)

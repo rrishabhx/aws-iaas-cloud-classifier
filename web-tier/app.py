@@ -8,7 +8,7 @@ from flask import Flask, render_template, request, redirect, url_for, abort
 from werkzeug.utils import secure_filename
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARN)
 
 app = Flask(__name__)
 app.config['UPLOAD_EXTENSIONS'] = IMAGE_EXTENSIONS
@@ -16,10 +16,10 @@ app.config['UPLOAD_PATH'] = 'uploads'
 
 
 def handle_image_upload(image, image_name):
-    logger.info("Trying to upload image: %s to S3 input bucket: %s", image, INPUT_BUCKET)
+    # logger.warning("Trying to upload image: %s to S3 input bucket: %s", image, INPUT_BUCKET)
     s3.upload_file_to_s3(image, INPUT_BUCKET)
 
-    logger.info("Sending image name to SQS: %s", image_name)
+    # logger.warning("Sending image name to SQS: %s", image_name)
     mq.send_message(REQUEST_QUEUE, image_name)
 
 
@@ -50,14 +50,19 @@ def index():
                 image_ext = os.path.splitext(image_name)[1]
                 if image_ext not in app.config['UPLOAD_EXTENSIONS']:
                     abort(400)
-                image_set.add(image_name)
-                handle_image_upload(image, image_name)
 
-        # logger.info("Starting auto-scaler")
-        # autoscaler.autoscale_based_on_load()
-        #
-        logger.info("Waiting for response from App-Tier")
+                image_name = s3.get_uniq_filename(image_name)
+                handle_image_upload(image, image_name)
+                image_set.add(image_name)
+
+        logger.warning("Starting auto-scaler")
+        autoscaler.scale_out_app_tier()
+
+        logger.warning("Waiting for response from App-Tier")
         image_predictions = fetch_from_response_queue(image_set)
+
+        logger.warning("Scaling-In app tier")
+        autoscaler.scale_in_app_tier()
 
         return render_template('index.html', preds=image_predictions)
 
