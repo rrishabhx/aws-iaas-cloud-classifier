@@ -33,10 +33,9 @@ def get_total_instances_to_create():
     total_required_instances = queue_size // MAX_REQUESTS_PER_INSTANCE
     logger.warning("Total required App servers to handle load: %s", total_required_instances)
 
-    current_running_instances = ec2.total_running_instances()
-    logger.warning("Total currently running App servers: %s", current_running_instances)
+    logger.warning("Total currently running App servers: %s", len(currently_running_instances))
 
-    instances_count_to_create = min(MAX_POSSIBLE_INSTANCES, total_required_instances) - current_running_instances
+    instances_count_to_create = min(MAX_POSSIBLE_INSTANCES, total_required_instances) - len(currently_running_instances)
     logger.warning("App server instances to be created: %s", instances_count_to_create)
 
     return instances_count_to_create
@@ -45,7 +44,8 @@ def get_total_instances_to_create():
 def scale_out_app_tier():
     while get_total_instances_to_create() > 0:
         logger.warning("Starting 1 App-server instance")
-        ec2.create_instances(AMI_ID, INSTANCE_TYPE, EC2_KEY_PAIR, SECURITY_GROUP_NAME)
+        instance_id = ec2.create_instances(AMI_ID, INSTANCE_TYPE, EC2_KEY_PAIR, SECURITY_GROUP_NAME)
+        currently_running_instances.add(instance_id)
         time.sleep(1)
 
 
@@ -58,6 +58,7 @@ def scale_in_app_tier():
     logger.warning("Size of Request SQS is 0. Terminating App Instances...")
     for app in ec2.get_running_instances_by_name(APP_SERVER_NAME):
         ec2.terminate_instance(app.id)
+        currently_running_instances.remove(app.id)
 
 
 if __name__ == '__main__':

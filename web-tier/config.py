@@ -1,3 +1,7 @@
+# Shared state
+currently_running_instances = set()
+
+
 # Web-Tier
 IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif']
 

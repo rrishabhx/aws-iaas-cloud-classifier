@@ -26,6 +26,8 @@ def create_instances(
             "Couldn't create instance with image %s, instance type %s, and key %s.",
             image_id, instance_type, key_name)
         raise
+    else:
+        return instances[0].id
 
 
 def start_instance(instance_id):
