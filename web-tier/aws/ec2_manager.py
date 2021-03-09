@@ -2,8 +2,6 @@ import logging
 import boto3
 from botocore.exceptions import ClientError
 
-import config
-
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARN)
 
@@ -21,11 +19,8 @@ def create_instances(
             instance_params['SecurityGroups'] = security_group_names
 
         instances = ec2_resource.create_instances(**instance_params, MinCount=1, MaxCount=max_count)
+        instances[0].create_tags(Tags=[{'Key': 'Name', 'Value': f'App-Server'}])
 
-        for inst in instances:
-            inst.create_tags(Tags=[{'Key': 'Name',
-                                    'Value': f'App-Server'}])
-            # logger.warning("Created EC2 instance: %s", inst.id)
     except ClientError:
         logging.exception(
             "Couldn't create instance with image %s, instance type %s, and key %s.",

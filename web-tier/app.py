@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from config import *
 from aws import test_s3 as s3
 from aws import msg_queue as mq
@@ -32,8 +33,10 @@ def fetch_from_response_queue(image_set):
         for msg in recvd_msgs:
             if msg.body in image_set:
                 print(f"Found {msg.body} in image_set")
-                image_predictions[msg.body] = msg.body
+                msg_content = msg.body[6:]
+                image_predictions[msg_content] = msg_content
                 image_set.remove(msg.body)
+                msg.delete()
 
     return image_predictions
 
@@ -54,6 +57,8 @@ def index():
                 image_name = s3.get_uniq_filename(image_name)
                 handle_image_upload(image, image_name)
                 image_set.add(image_name)
+
+        time.sleep(2)
 
         logger.warning("Starting auto-scaler")
         autoscaler.scale_out_app_tier()

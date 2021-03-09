@@ -26,7 +26,7 @@ def get_total_requests_in_sqs():
         return approx_size
 
 
-def scale_out_app_tier():
+def get_total_instances_to_create():
     queue_size = get_total_requests_in_sqs()
     logger.warning("Total Requests in SQS: %s", queue_size)
 
@@ -37,9 +37,16 @@ def scale_out_app_tier():
     logger.warning("Total currently running App servers: %s", current_running_instances)
 
     instances_count_to_create = min(MAX_POSSIBLE_INSTANCES, total_required_instances) - current_running_instances
-    logger.warning("Creating new App server instances: %s", instances_count_to_create)
+    logger.warning("App server instances to be created: %s", instances_count_to_create)
 
-    ec2.create_instances(AMI_ID, INSTANCE_TYPE, EC2_KEY_PAIR, SECURITY_GROUP_NAME, instances_count_to_create)
+    return instances_count_to_create
+
+
+def scale_out_app_tier():
+    while get_total_instances_to_create() > 0:
+        logger.warning("Starting 1 App-server instance")
+        ec2.create_instances(AMI_ID, INSTANCE_TYPE, EC2_KEY_PAIR, SECURITY_GROUP_NAME)
+        time.sleep(1)
 
 
 def scale_in_app_tier():

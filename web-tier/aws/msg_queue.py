@@ -91,17 +91,11 @@ def send_message(queue_name, message_body, message_attributes=None):
 
 
 if __name__ == '__main__':
-    # q_url = sqs_client.get_queue_url(QueueName=config.REQUEST_QUEUE, QueueOwnerAWSAccountId="551493253543")
+    print(get_queue_size(config.REQUEST_QUEUE))
 
     # for i in range(1000):
     #     send_message(q, "What on earth is this?")
     #     time.sleep(1)
 
-    # size = get_queue_size(q)
-    # # print("Queue size:", get_queue_size(q))
-
     while True:
         print(receive_messages(config.REQUEST_QUEUE, 10, 3))
-        # get_queue_size(q)
-        # print("Queue size:", get_queue_size(q))
-        # time.sleep(3)
