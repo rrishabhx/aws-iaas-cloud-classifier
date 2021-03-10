@@ -3,7 +3,7 @@ import logging
 import boto3
 from botocore.exceptions import ClientError
 
-import config
+import settings as s
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARN)
@@ -90,12 +90,21 @@ def send_message(queue_name, message_body, message_attributes=None):
         return response
 
 
+def cleanup_queue(queue_name):
+    print(f"Cleaning up Queue {queue_name}")
+    while receive_messages(queue_name, 10, 3):
+        continue
+
+
 if __name__ == '__main__':
-    print(get_queue_size(config.REQUEST_QUEUE))
+    print(get_queue_size(s.REQUEST_QUEUE))
+    send_message(s.REQUEST_QUEUE, "8b67671_ship.png")
 
     # for i in range(1000):
     #     send_message(q, "What on earth is this?")
     #     time.sleep(1)
 
-    while True:
-        print(receive_messages(config.REQUEST_QUEUE, 10, 3))
+    # while True:
+    #     print(receive_messages(config.REQUEST_QUEUE, 10, 3))
+
+    # cleanup_queue(s.REQUEST_QUEUE)

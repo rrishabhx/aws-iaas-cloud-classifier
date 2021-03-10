@@ -1,9 +1,10 @@
 import logging
 import time
+import math
 import statistics as st
 from botocore.exceptions import ClientError
 
-from config import *
+from settings import *
 from . import ec2_manager as ec2
 from . import msg_queue as mq
 
@@ -30,7 +31,7 @@ def get_total_instances_to_create():
     queue_size = get_total_requests_in_sqs()
     logger.warning("Total Requests in SQS: %s", queue_size)
 
-    total_required_instances = queue_size // MAX_REQUESTS_PER_INSTANCE
+    total_required_instances = math.ceil(queue_size / MAX_REQUESTS_PER_INSTANCE)
     logger.warning("Total required App servers to handle load: %s", total_required_instances)
 
     logger.warning("Total currently running App servers: %s", len(currently_running_instances))
@@ -44,7 +45,7 @@ def get_total_instances_to_create():
 def scale_out_app_tier():
     while get_total_instances_to_create() > 0:
         logger.warning("Starting 1 App-server instance")
-        instance_id = ec2.create_instances(AMI_ID, INSTANCE_TYPE, EC2_KEY_PAIR, SECURITY_GROUP_NAME)
+        instance_id = ec2.create_instances(AMI_ID_APP_2, INSTANCE_TYPE, EC2_KEY_PAIR, SECURITY_GROUP_NAME)
         currently_running_instances.add(instance_id)
         time.sleep(1)
 
@@ -57,8 +58,11 @@ def scale_in_app_tier():
 
     logger.warning("Size of Request SQS is 0. Terminating App Instances...")
     for app in ec2.get_running_instances_by_name(APP_SERVER_NAME):
-        ec2.terminate_instance(app.id)
-        currently_running_instances.remove(app.id)
+        try:
+            ec2.terminate_instance(app.id)
+            currently_running_instances.remove(app.id)
+        except:
+            pass
 
 
 if __name__ == '__main__':

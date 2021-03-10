@@ -1,5 +1,6 @@
 import logging
 import boto3
+from settings import *
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
@@ -12,8 +13,20 @@ ec2_client = boto3.client('ec2')
 def create_instances(
         image_id, instance_type, key_name, security_group_names=None, max_count=1):
     try:
+        # user_data_init_app = '''#!/bin/bash
+        # echo "hello world" > test.log
+        # python3 /root/app-tier/run_poller.py &> poller.log
+        # '''
+        #
+        user_data_init_app = '''#!/bin/bash
+        python3 /root/app-tier/run_poller.py &> /root/app-tier/poller.log'''
+
+        # user_data_working = '''#!/bin/bash
+        # echo 'to hell with this shit' > /root/hello.txt'''
+
         instance_params = {
-            'ImageId': image_id, 'InstanceType': instance_type, 'KeyName': key_name
+            'ImageId': image_id, 'InstanceType': instance_type, 'KeyName': key_name,
+            'UserData': user_data_init_app
         }
         if security_group_names is not None:
             instance_params['SecurityGroups'] = security_group_names
@@ -120,11 +133,10 @@ def print_all_running_instances():
 if __name__ == '__main__':
     print(total_running_instances())
 
-    # instance = create_instances(config.AMI_ID, "t2.micro", config.EC2_KEY_PAIR,
-    #                             config.SECURITY_GROUP_NAME, 3)
+    instance = create_instances(AMI_ID_APP_2, "t2.micro", EC2_KEY_PAIR, SECURITY_GROUP_NAME)
 
-    for app in get_running_instances_by_name('App-Server'):
-        terminate_instance(app.id)
+    # for app in get_running_instances_by_name('App-Server'):
+    #     terminate_instance(app.id)
 
 # instance.create_tags(Tags=[{'Key':'Name',
 #                             'Value': 'FarziInstance'}])

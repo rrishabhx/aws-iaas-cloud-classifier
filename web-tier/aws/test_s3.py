@@ -1,11 +1,11 @@
 import logging
 import uuid
-
+import pickle
 import boto3
 
 from botocore.exceptions import ClientError
 
-import config
+from settings import *
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ s3_resource = boto3.resource('s3')
 s3_client = boto3.client('s3')
 
 
-def put_object(bucket, object_key, data):
+def put_object(bucket_name, object_key, data):
     """
     Upload data to a bucket and identify it with the specified object key.
 
@@ -34,17 +34,30 @@ def put_object(bucket, object_key, data):
             raise
 
     try:
+        bucket = s3_resource.Bucket(bucket_name)
         obj = bucket.Object(object_key)
         obj.put(Body=put_data)
         obj.wait_until_exists()
         logger.warning("Put object '%s' to bucket '%s'.", object_key, bucket.name)
     except ClientError:
         logger.exception("Couldn't put object '%s' to bucket '%s'.",
-                         object_key, bucket.name)
+                         object_key, bucket_name)
         raise
     finally:
         if getattr(put_data, 'close', None):
             put_data.close()
+
+
+def serialize(text):
+    serialized_object = pickle.dumps(text)
+    return serialized_object
+
+
+def deserialize(obj):
+    try:
+        return pickle.loads(obj)
+    except:
+        return None
 
 
 def upload_file(file_name, bucket, object_name=None):
@@ -69,12 +82,12 @@ def upload_file(file_name, bucket, object_name=None):
     return True
 
 
-def upload_file_to_s3(file, bucket_name, acl="public-read"):
+def upload_file_to_s3(file, filename, bucket_name, acl="public-read"):
     try:
         s3_client.upload_fileobj(
             file,
             bucket_name,
-            file.filename,
+            filename,
             ExtraArgs={
                 "ACL": acl,
                 "ContentType": file.content_type
@@ -85,7 +98,7 @@ def upload_file_to_s3(file, bucket_name, acl="public-read"):
         logger.error("Couldn't upload image to S3: ", e)
 
 
-def get_object(bucket, object_key):
+def get_object(bucket_name, object_key):
     """
     Gets an object from a bucket.
 
@@ -96,12 +109,11 @@ def get_object(bucket, object_key):
     :return: The object data in bytes.
     """
     try:
+        bucket = s3_resource.Bucket(bucket_name)
         body = bucket.Object(object_key).get()['Body'].read()
         logger.warning("Got object '%s' from bucket '%s'.", object_key, bucket.name)
     except ClientError:
-        logger.exception(("Couldn't get object '%s' from bucket '%s'.",
-                          object_key, bucket.name))
-        raise
+        return None
     else:
         return body
 
@@ -122,7 +134,7 @@ def list_objects(bucket, prefix=None):
         else:
             objects = list(bucket.objects.filter(Prefix=prefix))
         logger.warning("Got objects %s from bucket '%s'",
-                    [o.key for o in objects], bucket.name)
+                       [o.key for o in objects], bucket.name)
     except ClientError:
         logger.exception("Couldn't get objects for bucket '%s'.", bucket.name)
         raise
@@ -136,9 +148,21 @@ def get_uniq_filename(file_name):
     return uniq_file_name
 
 
+def get_prediction_from_metadata(image_obj):
+    metadata = s3_client.head_object(Bucket=OUTPUT_BUCKET, Key=image_obj.name)
+    print(metadata["Metadata"])
+
+
 if __name__ == '__main__':
-    print(get_uniq_filename("1_ship.png"))
-    print(get_uniq_filename("1_hellot.png"))
+    # output = "german shepherd"
+    # serialized_txt = serialize_text(output)
+    # print(serialized_txt)
+    # put_object(OUTPUT_BUCKET, "1_dog.png", serialized_txt)
+
+    # print(pickle.loads(serialized_txt))
+    obj = get_object(OUTPUT_BUCKET, "1_dog.png")
+    print(obj)
+    print(pickle.loads(obj))
     # print(config.INPUT_BUCKET)
     # upload_file('uploads/0_cat.png', constants.INPUT_BUCKET)
 # s3_buck = s3.Bucket('cse546-input-bucket')
