@@ -1,52 +1,55 @@
 import logging
-import boto3
 from botocore.exceptions import ClientError
 
 import subprocess
 import boto3
-import json
-import os
+import time
 import pickle
 from settings import *
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+sqs_resource = boto3.resource('sqs')
+sqs_client = boto3.client('sqs')
+
 
 def fetch_image_from_s3(input_image_id):
     s3 = boto3.client(S3)
-    s3.download_file(INPUT_BUCKET,input_image_id,IMAGES_PATH+input_image_id)
+    s3.download_file(INPUT_BUCKET, input_image_id, IMAGES_PATH + input_image_id)
     runShellCommand(input_image_id)
 
 
 def runShellCommand(input_image_id):
-    prediction=subprocess.check_output(['/usr/bin/python3', '/home/ubuntu/classifier/image_classification.py', IMAGES_PATH+input_image_id])
-    prediction_output=prediction.strip().decode('utf-8')
-    print(prediction_output)
-    upload_file(input_image_id,serialize(prediction_output))
+    prediction = subprocess.check_output(
+        ['python3', 'image_classification.py', IMAGES_PATH + input_image_id, '2>&1', '|', 'tee -a classify.log'])
+    prediction_output = prediction.strip().decode('utf-8')
+    logger.info("Prediction output= %s", prediction_output)
+
+    prediction_output_serialized = serialize(prediction_output)
+    upload_file(input_image_id, prediction_output_serialized)
 
 
 def serialize(text):
     serialized_object = pickle.dumps(text)
-    print(serialized_object)
     return serialized_object
 
 
-def upload_file(input_image_id,serialized_object):
+def upload_file(input_image_id, serialized_object):
     s3 = boto3.client(S3)
-    s3.put_object(Bucket=OUTPUT_BUCKET,Key=input_image_id,Body=serialized_object)
-    print(str(serialized_object))
+    s3.put_object(Bucket=OUTPUT_BUCKET, Key=input_image_id, Body=serialized_object)
 
 
-def initiate_app_tier(isRunning):
+def initiate_app_tier():
     fetch_imageid_from_sqs()
-    
-    
+
+
 def fetch_imageid_from_sqs():
-    messages= receive_messages(REQUEST_QUEUE,MAX_NUMBER_OF_MSGS_TO_FETCH,WAIT_TIME_SECONDS,False)
+    messages = receive_messages(REQUEST_QUEUE, MAX_NUMBER_OF_MSGS_TO_FETCH, WAIT_TIME_SECONDS, False)
     for msg in messages:
         fetch_image_from_s3(msg.body)
-    
+        delete_message(msg)
+
 
 def receive_messages(queue_name, max_number, wait_time, to_delete=True):
     try:
@@ -67,6 +70,15 @@ def receive_messages(queue_name, max_number, wait_time, to_delete=True):
         return messages
 
 
+def delete_message(message):
+    try:
+        message.delete()
+        logger.info("Deleted message: %s", message.message_id)
+    except ClientError as error:
+        logger.exception("Couldn't delete message: %s", message.message_id)
+        raise error
+
+
 def get_queue(name):
     try:
         queue = sqs_resource.get_queue_by_name(QueueName=name)
@@ -78,5 +90,6 @@ def get_queue(name):
         return queue
 
 
-while True :
-    initiate_app_tier(True)
+while True:
+    initiate_app_tier()
+    time.sleep(1)
