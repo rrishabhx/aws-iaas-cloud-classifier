@@ -1,8 +1,6 @@
 import logging
 from concurrent.futures.thread import ThreadPoolExecutor
-
-# Shared state
-currently_running_instances = set()
+from queue import PriorityQueue
 
 # ThreadPool
 executor = ThreadPoolExecutor(5)
@@ -51,3 +49,19 @@ def init_logger(name):
         datefmt='%Y-%m-%d %H:%M:%S',
     )
     return logger
+
+
+def init_app_inst_q():
+    aq = PriorityQueue()
+    for i in range(1, MAX_POSSIBLE_INSTANCES + 1):
+        aq.put(i)
+
+    return aq
+
+
+def instance_q():
+    return _instance_q
+
+
+# Shared state
+_instance_q = init_app_inst_q()

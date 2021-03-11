@@ -11,7 +11,7 @@ ec2_resource = boto3.resource('ec2')
 ec2_client = boto3.client('ec2')
 
 
-def create_instances(image_id, instance_type, key_name, security_group_names=None, max_count=1):
+def create_app_instances(image_id, instance_type, key_name, instance_name, security_group_names=None, max_count=1):
     instance_id = None
     try:
         user_data_init_app = '''#!/bin/bash
@@ -31,7 +31,7 @@ def create_instances(image_id, instance_type, key_name, security_group_names=Non
         instance_id = instances[0].id
         # instances[0].wait_until_running()
         time.sleep(2)
-        instances[0].create_tags(Tags=[{'Key': 'Name', 'Value': f'App-Server'}])
+        instances[0].create_tags(Tags=[{'Key': 'Name', 'Value': f'{instance_name}'}])
 
     except ClientError:
         logging.exception(
@@ -112,7 +112,7 @@ def get_running_instances_by_name(name):
     try:
         instances = ec2_resource.instances.filter(
             Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']},
-                     {'Name': 'tag:Name', 'Values': [name]}])
+                     {'Name': 'tag:Name', 'Values': [name + '*']}])
 
         list_instances = [instance.id for instance in instances]
     except ClientError:
@@ -131,8 +131,8 @@ def print_all_running_instances():
 
 if __name__ == '__main__':
     print(total_running_instances())
-
-    instance = create_instances(s.AMI_ID_APP_2, "t2.micro", s.EC2_KEY_PAIR, s.SECURITY_GROUP_NAME)
+    instance_name = f"{s.APP_SERVER_NAME}-{s.instance_q().get()}"
+    create_app_instances(s.AMI_ID_APP_2, "t2.micro", s.EC2_KEY_PAIR, instance_name, s.SECURITY_GROUP_NAME)
 
     # for app in get_running_instances_by_name('App-Server'):
     #     terminate_instance(app.id)
