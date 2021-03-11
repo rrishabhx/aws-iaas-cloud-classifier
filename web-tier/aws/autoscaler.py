@@ -19,7 +19,7 @@ def get_total_requests_in_sqs():
             size_values.append(int(mq.get_queue_size(s.REQUEST_QUEUE)))
 
         logger.info("List of queue sizes fetched from SQS cluster: " + " ".join(str(value) for value in size_values))
-        approx_size = st.mode(size_values)
+        approx_size = st.multimode(size_values)[0]
         logger.info("Approx size of Queue: %s", approx_size)
     except ClientError as error:
         raise error

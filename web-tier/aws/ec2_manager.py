@@ -114,7 +114,7 @@ def get_running_instances_by_name(name):
             Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']},
                      {'Name': 'tag:Name', 'Values': [name]}])
 
-        list_instances = [instance for instance in instances]
+        list_instances = [instance.id for instance in instances]
     except ClientError:
         logger.exception("Couldn't find total running instances")
         raise
