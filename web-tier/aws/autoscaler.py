@@ -14,6 +14,7 @@ logging.basicConfig(level=logging.INFO)
 
 def get_total_requests_in_sqs():
     try:
+        time.sleep(1)
         size_values = []
         for _ in range(5):
             size_values.append(int(mq.get_queue_size(REQUEST_QUEUE)))
@@ -43,27 +44,30 @@ def get_total_instances_to_create():
 
 
 def scale_out_app_tier():
+    created_app_servers = []
     while get_total_instances_to_create() > 0:
         logger.info("Starting 1 App-server instance")
         instance_id = ec2.create_instances(AMI_ID_APP_2, INSTANCE_TYPE, EC2_KEY_PAIR, SECURITY_GROUP_NAME)
         currently_running_instances.add(instance_id)
-        time.sleep(1)
+        created_app_servers.append(instance_id)
+
+    return created_app_servers
 
 
-def scale_in_app_tier():
+def scale_in_app_tier(created_app_servers):
     logger.info("Waiting for all requests in Request-Q to be processed")
-    while mq.receive_messages(REQUEST_QUEUE, 1, WAIT_TIME_SECONDS, False) and mq.get_messages_in_flight(
+    while mq.receive_messages(REQUEST_QUEUE, 1, WAIT_TIME_SECONDS, False) or mq.get_messages_in_flight(
             REQUEST_QUEUE) > 0:
         time.sleep(1)
         continue
 
     logger.info("Size of Request SQS is 0. Terminating App Instances...")
-    for app in ec2.get_running_instances_by_name(APP_SERVER_NAME):
+    for app_id in created_app_servers:
         try:
-            ec2.terminate_instance(app.id)
-            currently_running_instances.remove(app.id)
-        except:
-            pass
+            ec2.terminate_instance(app_id)
+            currently_running_instances.remove(app_id)
+        except ClientError:
+            logger.info("Couldn't terminate instance: %s. It must already be down.", app_id)
 
 
 if __name__ == '__main__':

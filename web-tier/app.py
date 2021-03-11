@@ -34,8 +34,6 @@ def fetch_response_from_output_bucket(image_set):
             image_obj = s3.get_object(OUTPUT_BUCKET, image_name)
             if image_obj is not None:
                 image_prediction = s3.deserialize(image_obj)
-                if image_prediction is None:
-                    image_prediction = s3.get_prediction_from_metadata(image_obj)
 
                 image_predictions[image_name[6:]] = image_prediction
                 images_to_remove.append(image_name)
@@ -83,13 +81,13 @@ def index():
         time.sleep(3)
 
         logger.info("Starting auto-scaler")
-        autoscaler.scale_out_app_tier()
+        created_app_servers = autoscaler.scale_out_app_tier()
 
         logger.info("Waiting for response from App-Tier")
         image_predictions = fetch_response_from_output_bucket(image_set)
 
         logger.info("Scaling-In app tier")
-        autoscaler.scale_in_app_tier()
+        autoscaler.scale_in_app_tier(created_app_servers)
 
         return render_template('index.html', preds=image_predictions)
 

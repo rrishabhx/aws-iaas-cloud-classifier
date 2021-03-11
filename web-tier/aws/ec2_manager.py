@@ -1,4 +1,6 @@
 import logging
+import time
+
 import boto3
 from settings import *
 from botocore.exceptions import ClientError
@@ -10,14 +12,9 @@ ec2_resource = boto3.resource('ec2')
 ec2_client = boto3.client('ec2')
 
 
-def create_instances(
-        image_id, instance_type, key_name, security_group_names=None, max_count=1):
+def create_instances(image_id, instance_type, key_name, security_group_names=None, max_count=1):
+    instance_id = None
     try:
-        # user_data_init_app = '''#!/bin/bash
-        # echo "hello world" > test.log
-        # python3 /root/app-tier/run_poller.py &> poller.log
-        # '''
-        #
         user_data_init_app = '''#!/bin/bash
         python3 /root/app-tier/run_poller.py &> /root/app-tier/poller.log'''
 
@@ -32,6 +29,9 @@ def create_instances(
             instance_params['SecurityGroups'] = security_group_names
 
         instances = ec2_resource.create_instances(**instance_params, MinCount=1, MaxCount=max_count)
+        instance_id = instances[0].id
+        # instances[0].wait_until_running()
+        time.sleep(2)
         instances[0].create_tags(Tags=[{'Key': 'Name', 'Value': f'App-Server'}])
 
     except ClientError:
@@ -39,8 +39,8 @@ def create_instances(
             "Couldn't create instance with image %s, instance type %s, and key %s.",
             image_id, instance_type, key_name)
         raise
-    else:
-        return instances[0].id
+    finally:
+        return instance_id
 
 
 def start_instance(instance_id):
