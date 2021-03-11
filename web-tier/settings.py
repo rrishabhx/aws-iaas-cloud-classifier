@@ -13,7 +13,7 @@ IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.JPEG', '.png', '.gif']
 REQUEST_QUEUE = "Request-Queue"
 RESPONSE_QUEUE = "Response-Queue"
 MAX_NUMBER_OF_MSGS_TO_FETCH = 2
-WAIT_TIME_SECONDS = 3
+WAIT_TIME_SECONDS = 5
 
 # EC2
 AMI_ID_BASE = "ami-0ee8cf7b8a34448a6"

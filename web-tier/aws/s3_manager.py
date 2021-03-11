@@ -38,7 +38,7 @@ def put_object(bucket_name, object_key, data):
         obj = bucket.Object(object_key)
         obj.put(Body=put_data)
         obj.wait_until_exists()
-        logger.warning("Put object '%s' to bucket '%s'.", object_key, bucket.name)
+        logger.info("Put object '%s' to bucket '%s'.", object_key, bucket.name)
     except ClientError:
         logger.exception("Couldn't put object '%s' to bucket '%s'.",
                          object_key, bucket_name)
@@ -93,7 +93,7 @@ def upload_file_to_s3(file, filename, bucket_name, acl="public-read"):
                 "ContentType": file.content_type
             }
         )
-        logger.warning("Upload to S3 complete")
+        logger.info("Upload to S3 complete")
     except ClientError as e:
         logger.error("Couldn't upload image to S3: ", e)
 
@@ -111,14 +111,14 @@ def get_object(bucket_name, object_key):
     try:
         bucket = s3_resource.Bucket(bucket_name)
         body = bucket.Object(object_key).get()['Body'].read()
-        logger.warning("Got object '%s' from bucket '%s'.", object_key, bucket.name)
+        logger.info("Got object '%s' from bucket '%s'.", object_key, bucket.name)
     except ClientError:
         return None
     else:
         return body
 
 
-def list_objects(bucket, prefix=None):
+def list_objects(bucket_name, prefix=None):
     """
     Lists the objects in a bucket, optionally filtered by a prefix.
 
@@ -129,6 +129,7 @@ def list_objects(bucket, prefix=None):
     :return: The list of objects.
     """
     try:
+        bucket = s3_resource.Bucket(bucket_name)
         if not prefix:
             objects = list(bucket.objects.all())
         else:

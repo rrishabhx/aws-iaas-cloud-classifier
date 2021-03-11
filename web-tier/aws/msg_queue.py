@@ -6,7 +6,7 @@ from botocore.exceptions import ClientError
 import settings as s
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.WARN)
+logging.basicConfig(level=logging.INFO)
 
 sqs_resource = boto3.resource('sqs')
 sqs_client = boto3.client('sqs')
@@ -44,6 +44,16 @@ def update_q_attributes(queue_url, attributes):
     )
 
 
+def get_messages_in_flight(queue_name):
+    try:
+        queue = get_queue(queue_name)
+        size = queue.attributes.get('ApproximateNumberOfMessagesNotVisible')
+    except ClientError as error:
+        logger.exception("Couldn't find the in-flight messages of the queue: %s", error)
+    else:
+        return int(size)
+
+
 def receive_messages(queue_name, max_number, wait_time, to_delete=True):
     try:
         queue = get_queue(queue_name)
@@ -77,7 +87,7 @@ def send_message(queue_name, message_body, message_attributes=None):
 
     if not message_attributes:
         message_attributes = {}
-    logger.warning("Send message: %s to the queue", message_body)
+    logger.info("Send message: %s to the queue", message_body)
     try:
         response = queue.send_message(
             MessageBody=message_body,
@@ -97,8 +107,14 @@ def cleanup_queue(queue_name):
 
 
 if __name__ == '__main__':
-    print(get_queue_size(s.REQUEST_QUEUE))
-    send_message(s.REQUEST_QUEUE, "8b67671_ship.png")
+    # print(get_queue_size(s.REQUEST_QUEUE))
+    # send_message(s.REQUEST_QUEUE, "8b67671_ship.png")
+    # print(get_messages_in_flight('RequestQ'))
+
+    # msgs = receive_messages('RequestQ', s.MAX_NUMBER_OF_MSGS_TO_FETCH, s.WAIT_TIME_SECONDS, False)
+    # print(msgs)
+    # print(len(msgs))
+
 
     # for i in range(1000):
     #     send_message(q, "What on earth is this?")
@@ -107,4 +123,4 @@ if __name__ == '__main__':
     # while True:
     #     print(receive_messages(config.REQUEST_QUEUE, 10, 3))
 
-    # cleanup_queue(s.REQUEST_QUEUE)
+    cleanup_queue(s.REQUEST_QUEUE)

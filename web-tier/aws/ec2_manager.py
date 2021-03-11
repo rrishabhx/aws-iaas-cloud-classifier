@@ -4,7 +4,7 @@ from settings import *
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.WARN)
+logging.basicConfig(level=logging.INFO)
 
 ec2_resource = boto3.resource('ec2')
 ec2_client = boto3.client('ec2')
@@ -54,7 +54,7 @@ def start_instance(instance_id):
     """
     try:
         response = ec2_resource.Instance(instance_id).start()
-        logger.warning("Started instance %s.", instance_id)
+        logger.info("Started instance %s.", instance_id)
     except ClientError:
         logger.exception("Couldn't start instance %s.", instance_id)
         raise
@@ -71,7 +71,7 @@ def terminate_instance(instance_id):
     """
     try:
         ec2_resource.Instance(instance_id).terminate()
-        logger.warning("Terminating instance %s.", instance_id)
+        logger.info("Terminating instance %s.", instance_id)
     except ClientError:
         logging.exception("Couldn't terminate instance %s.", instance_id)
         raise
@@ -88,7 +88,7 @@ def stop_instance(instance_id):
     """
     try:
         response = ec2_resource.Instance(instance_id).stop()
-        logger.warning("Stopped instance %s.", instance_id)
+        logger.info("Stopped instance %s.", instance_id)
     except ClientError:
         logger.exception("Couldn't stop instance %s.", instance_id)
         raise
