@@ -1,37 +1,35 @@
-import logging
 import os
 import time
-from settings import *
+import settings as s
 from aws import s3_manager as s3
 from aws import msg_queue as mq
 from aws import autoscaler
 from flask import Flask, render_template, request, abort
 from werkzeug.utils import secure_filename
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logger = s.init_logger(__name__)
 
 app = Flask(__name__)
-app.config['UPLOAD_EXTENSIONS'] = IMAGE_EXTENSIONS
+app.config['UPLOAD_EXTENSIONS'] = s.IMAGE_EXTENSIONS
 app.config['UPLOAD_PATH'] = 'uploads'
 
 
 def handle_image_upload(image, image_name):
-    logger.info("Trying to upload image: %s to S3 input bucket: %s", image, INPUT_BUCKET)
-    s3.upload_file_to_s3(image, image_name, INPUT_BUCKET)
+    logger.info("Trying to upload image: %s to S3 input bucket: %s", image, s.INPUT_BUCKET)
+    s3.upload_file_to_s3(image, image_name, s.INPUT_BUCKET)
 
     logger.info("Sending image name to SQS: %s", image_name)
-    mq.send_message(REQUEST_QUEUE, image_name)
+    mq.send_message(s.REQUEST_QUEUE, image_name)
 
 
 def fetch_response_from_output_bucket(image_set):
     image_predictions = {}
     while image_set:
-        print("Current image set:", image_set)
+        logger.info(f"Current image set size: {len(image_set)}")
         images_to_remove = list()
 
         for image_name in image_set:
-            image_obj = s3.get_object(OUTPUT_BUCKET, image_name)
+            image_obj = s3.get_object(s.OUTPUT_BUCKET, image_name)
             if image_obj is not None:
                 image_prediction = s3.deserialize(image_obj)
 
@@ -48,16 +46,16 @@ def fetch_from_response_queue(image_set):
     image_predictions = {}
     while image_set:
         # To Do: Update request_q with response_q below
-        recvd_msgs = mq.receive_messages(RESPONSE_QUEUE, MAX_NUMBER_OF_MSGS_TO_FETCH, WAIT_TIME_SECONDS, False)
+        recvd_msgs = mq.receive_messages(s.RESPONSE_QUEUE, s.MAX_NUMBER_OF_MSGS_TO_FETCH, s.WAIT_TIME_SECONDS, False)
 
         for msg in recvd_msgs:
             if msg.body in image_set:
-                print(f"Found {msg.body} in image_set")
+                logger.info(f"Found {msg.body} in image_set")
                 msg_content = msg.body[6:]
                 image_predictions[msg_content] = msg_content
                 image_set.remove(msg.body)
                 msg.delete()
-
+            time.sleep(0.5)
     return image_predictions
 
 
@@ -91,6 +89,7 @@ def index():
 
         return render_template('index.html', preds=image_predictions)
 
+    logger.info("Counter Value: %s", s.counter_val())
     return render_template('index.html')
 
 

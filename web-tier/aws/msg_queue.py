@@ -5,8 +5,7 @@ from botocore.exceptions import ClientError
 
 import settings as s
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logger = s.init_logger(__name__)
 
 sqs_resource = boto3.resource('sqs')
 sqs_client = boto3.client('sqs')

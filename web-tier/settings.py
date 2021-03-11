@@ -1,3 +1,4 @@
+import logging
 from concurrent.futures.thread import ThreadPoolExecutor
 
 # Shared state
@@ -8,6 +9,7 @@ executor = ThreadPoolExecutor(5)
 
 # Web-Tier
 IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.JPEG', '.png', '.gif']
+counter = 0
 
 # SQS
 REQUEST_QUEUE = "Request-Queue"
@@ -30,3 +32,22 @@ MAX_REQUESTS_PER_INSTANCE = 5
 # S3
 INPUT_BUCKET = "cse546-input-bucket"
 OUTPUT_BUCKET = "cse546-output-bucket"
+
+
+def counter_val():
+    global counter
+    counter += 1
+    return counter
+
+
+def init_logger(name):
+    logger = logging.getLogger(name)
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+    logging.basicConfig(
+        filename='web_controller.log',
+        level=logging.INFO,
+        format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+    )
+    return logger

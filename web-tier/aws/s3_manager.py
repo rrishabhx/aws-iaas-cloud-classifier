@@ -5,9 +5,9 @@ import boto3
 
 from botocore.exceptions import ClientError
 
-from settings import *
+import settings as s
 
-logger = logging.getLogger(__name__)
+logger = s.init_logger(__name__)
 
 s3_resource = boto3.resource('s3')
 s3_client = boto3.client('s3')
@@ -150,7 +150,7 @@ def get_uniq_filename(file_name):
 
 
 def get_prediction_from_metadata(image_obj):
-    metadata = s3_client.head_object(Bucket=OUTPUT_BUCKET, Key=image_obj.name)
+    metadata = s3_client.head_object(Bucket=s.OUTPUT_BUCKET, Key=image_obj.name)
     print(metadata["Metadata"])
 
 
@@ -161,7 +161,7 @@ if __name__ == '__main__':
     # put_object(OUTPUT_BUCKET, "1_dog.png", serialized_txt)
 
     # print(pickle.loads(serialized_txt))
-    obj = get_object(OUTPUT_BUCKET, "1_dog.png")
+    obj = get_object(s.OUTPUT_BUCKET, "1_dog.png")
     print(obj)
     print(pickle.loads(obj))
     # print(config.INPUT_BUCKET)

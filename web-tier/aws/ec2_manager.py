@@ -2,11 +2,10 @@ import logging
 import time
 
 import boto3
-from settings import *
+import settings as s
 from botocore.exceptions import ClientError
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logger = s.init_logger(__name__)
 
 ec2_resource = boto3.resource('ec2')
 ec2_client = boto3.client('ec2')
@@ -133,7 +132,7 @@ def print_all_running_instances():
 if __name__ == '__main__':
     print(total_running_instances())
 
-    instance = create_instances(AMI_ID_APP_2, "t2.micro", EC2_KEY_PAIR, SECURITY_GROUP_NAME)
+    instance = create_instances(s.AMI_ID_APP_2, "t2.micro", s.EC2_KEY_PAIR, s.SECURITY_GROUP_NAME)
 
     # for app in get_running_instances_by_name('App-Server'):
     #     terminate_instance(app.id)
