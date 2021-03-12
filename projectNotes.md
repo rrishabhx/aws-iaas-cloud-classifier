@@ -62,4 +62,4 @@
 
 ### To-discuss
 1. Use one aws account for the entire project.
-2. Since we removed Controller from our design, now we don't need individual web server listening on App-tier instances. We just need a polling mechanism (i.e an infinite while loop) which will poll the SQS URL for new messages. This makes Bvya's work relatively easy at App tier.
+2. Since we removed Controller from our design, now we don't need individual web server listening on App-tier instances. We just need a polling mechanism (i.e an infinite while loop) which will poll the SQS URL for new messages.
