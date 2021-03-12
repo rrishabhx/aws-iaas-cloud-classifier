@@ -1,11 +1,13 @@
 import os
 import time
-import settings as s
-from aws import s3_manager as s3
-from aws import msg_queue as mq
-from aws import autoscaler
+
 from flask import Flask, render_template, request, abort
 from werkzeug.utils import secure_filename
+
+import settings as s
+from aws import autoscaler
+from aws import msg_queue as mq
+from aws import s3_manager as s3
 
 logger = s.init_logger(__name__)
 
@@ -15,6 +17,11 @@ app.config['UPLOAD_PATH'] = 'uploads'
 
 
 def handle_image_upload(image, image_name):
+    """
+    Uploads image to input S3 bucket and Sends image-id to the Request SQS
+    :param image: Image data
+    :param image_name: Image name with unique prefix (image-id)
+    """
     logger.info("Trying to upload image: %s to S3 input bucket: %s", image, s.INPUT_BUCKET)
     s3.upload_file_to_s3(image, image_name, s.INPUT_BUCKET)
 
@@ -23,6 +30,11 @@ def handle_image_upload(image, image_name):
 
 
 def fetch_response_from_output_bucket(image_set):
+    """
+    Starts a Poller which requests the output bucket for every image-id in the request.
+    :param image_set: A set() of IDs of images that came in HTTP POST request
+    :return: A dictionary of image-ids and classifier prediction
+    """
     image_predictions = {}
     while image_set:
         logger.info(f"Current image set size: {len(image_set)}")
@@ -43,6 +55,11 @@ def fetch_response_from_output_bucket(image_set):
 
 
 def fetch_from_response_queue(image_set):
+    """
+    Starts a Poller which requests the output response SQS for every image-id in the request.
+    :param image_set: A set() of IDs of images that came in HTTP POST request
+    :return: A dictionary of image-ids and classifier prediction
+    """
     image_predictions = {}
     while image_set:
         # To Do: Update request_q with response_q below
@@ -89,7 +106,6 @@ def index():
 
         return render_template('index.html', preds=image_predictions)
 
-    logger.info("Counter Value: %s", s.counter_val())
     return render_template('index.html')
 
 

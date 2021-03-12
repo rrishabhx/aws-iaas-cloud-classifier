@@ -1,10 +1,9 @@
 from botocore.exceptions import ClientError
 
+import settings as s
+from aws import ec2_manager as ec2
 from aws import msg_queue as mq
 from aws import s3_manager as s3
-from aws import ec2_manager as ec2
-from aws import autoscaler
-import settings as s
 
 
 def clean_sqs(*args):

@@ -2,8 +2,9 @@ import logging
 import time
 
 import boto3
-import settings as s
 from botocore.exceptions import ClientError
+
+import settings as s
 
 logger = s.init_logger(__name__)
 
@@ -12,6 +13,16 @@ ec2_client = boto3.client('ec2')
 
 
 def create_app_instances(image_id, instance_type, key_name, instance_name, security_group_names=None, max_count=1):
+    """
+    Spawns a new app-tier EC2 instance with user_data set to the app-instance startup script.
+    :param image_id: Image name with unique prefix
+    :param instance_type: Type of instance
+    :param key_name: Key pair name of AWS account
+    :param instance_name: Instance name
+    :param security_group_names: List of security groups
+    :param max_count: Max count of instances to create
+    :return: Instance id of the first instance created
+    """
     instance_id = None
     try:
         user_data_init_app = '''#!/bin/bash
@@ -42,25 +53,6 @@ def create_app_instances(image_id, instance_type, key_name, instance_name, secur
         return instance_id
 
 
-def start_instance(instance_id):
-    """
-    Starts an instance. The request returns immediately. To wait for the instance
-    to start, use the Instance.wait_until_running() function.
-
-    :param instance_id: The ID of the instance to start.
-    :return: The response to the start request. This includes both the previous and
-             current state of the instance.
-    """
-    try:
-        response = ec2_resource.Instance(instance_id).start()
-        logger.info("Started instance %s.", instance_id)
-    except ClientError:
-        logger.exception("Couldn't start instance %s.", instance_id)
-        raise
-    else:
-        return response
-
-
 def terminate_instance(instance_id):
     """
     Terminates an instance. The request returns immediately. To wait for the
@@ -76,39 +68,12 @@ def terminate_instance(instance_id):
         raise
 
 
-def stop_instance(instance_id):
-    """
-    Stops an instance. The request returns immediately. To wait for the instance
-    to stop, use the Instance.wait_until_stopped() function.
-
-    :param instance_id: The ID of the instance to stop.
-    :return: The response to the stop request. This includes both the previous and
-             current state of the instance.
-    """
-    try:
-        response = ec2_resource.Instance(instance_id).stop()
-        logger.info("Stopped instance %s.", instance_id)
-    except ClientError:
-        logger.exception("Couldn't stop instance %s.", instance_id)
-        raise
-    else:
-        return response
-
-
-def total_running_instances():
-    try:
-        instances = ec2_resource.instances.filter(
-            Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
-
-        list_instances = [instance for instance in instances]
-    except ClientError:
-        logger.exception("Couldn't find total running instances")
-        raise
-    else:
-        return len(list_instances)
-
-
 def get_running_instances_by_name(name):
+    """
+    Finds all currently running or pending state app-tier instances
+    :param name: Name string to filter the instances
+    :return: List of instances
+    """
     try:
         instances = ec2_resource.instances.filter(
             Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'pending']},
@@ -120,28 +85,3 @@ def get_running_instances_by_name(name):
         raise
     else:
         return list_instances
-
-
-def print_all_running_instances():
-    instances = ec2_resource.instances.filter(
-        Filters=[{'Name': 'instance-state-name', 'Values': ['running']}])
-    for instance in instances:
-        print(instance.id, instance.instance_type)
-
-
-if __name__ == '__main__':
-    print(total_running_instances())
-    instance_name = f"{s.APP_SERVER_NAME}-{s.instance_q().get()}"
-    create_app_instances(s.AMI_ID_APP_2, "t2.micro", s.EC2_KEY_PAIR, instance_name, s.SECURITY_GROUP_NAME)
-
-    # for app in get_running_instances_by_name('App-Server'):
-    #     terminate_instance(app.id)
-
-# instance.create_tags(Tags=[{'Key':'Name',
-#                             'Value': 'FarziInstance'}])
-# print(instance)
-# response = ec2_client.describe_key_pairs()
-# print(response)
-
-# instance_id = "i-09c5eae4563fde21c"
-# terminate_instance(instance_id)

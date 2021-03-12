@@ -7,7 +7,6 @@ executor = ThreadPoolExecutor(5)
 
 # Web-Tier
 IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.JPEG', '.png', '.gif']
-counter = 0
 
 # SQS
 REQUEST_QUEUE = "Request-Queue"
@@ -32,12 +31,6 @@ INPUT_BUCKET = "cse546-input-bucket"
 OUTPUT_BUCKET = "cse546-output-bucket"
 
 
-def counter_val():
-    global counter
-    counter += 1
-    return counter
-
-
 def init_logger(name):
     logger = logging.getLogger(name)
     for handler in logging.root.handlers[:]:
@@ -52,6 +45,11 @@ def init_logger(name):
 
 
 def init_app_inst_q():
+    """
+    Creates a Priority Queue of all possible App Instance numbers. To create any App instance, the next available number
+    is dequeued from this priority queue only.
+    :return: Priority Queue with max possible instances numbering
+    """
     aq = PriorityQueue()
     for i in range(1, MAX_POSSIBLE_INSTANCES + 1):
         aq.put(i)
