@@ -13,11 +13,18 @@
     </form>
     {% if preds|length >= 1 %}
     <h2>Prediction Results</h2>
-    <ul>
+    <table>
+        <tr>
+            <th>Input Image</th>
+            <th>Predicted Value</th>
+        </tr>
         {% for key, value in preds.items() %}
-        <li>{{ key }} = {{ value }}</li>
+        <tr>
+            <td>{{ key }}</td>
+            <td>{{ value }}</td>
+        </tr>
         {% endfor %}
-    </ul>
+    </table>
     {% endif %}
 </div>
 {% endblock %}
