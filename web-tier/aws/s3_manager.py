@@ -26,7 +26,7 @@ def deserialize(obj):
     """
     De-serializes the object to get the data
     :param obj:
-    :return:
+    :return: Prediction output string
     """
     try:
         return pickle.loads(obj)

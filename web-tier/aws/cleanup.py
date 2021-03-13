@@ -31,6 +31,6 @@ def shutdown_app_servers(app_servers_list):
 
 
 if __name__ == '__main__':
-    clean_sqs(s.REQUEST_QUEUE, s.RESPONSE_QUEUE)
+    clean_sqs(s.REQUEST_QUEUE)
     clean_s3(s.INPUT_BUCKET, s.OUTPUT_BUCKET)
     shutdown_app_servers(ec2.get_running_instances_by_name(s.APP_SERVER_NAME))
